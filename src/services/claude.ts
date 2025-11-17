@@ -7,10 +7,11 @@ let client: Anthropic | null = null;
 
 export const getClaudeClient = (): Anthropic => {
   if (!client && apiKey) {
+    // Note: In production, use a backend proxy instead of browser-side API calls
     client = new Anthropic({
       apiKey,
-      // Note: In production, use a backend proxy instead of browser-side API calls
-    } as Anthropic);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any);
   }
   if (!client) {
     throw new Error('Anthropic API key not configured');
