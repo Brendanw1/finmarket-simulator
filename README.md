@@ -43,9 +43,27 @@ cp .env.example .env
 
 ### 4. Firebase Setup
 
-1. Enable Email/Password authentication
-2. Create Firestore database
-3. Add security rules (see Firebase Console)
+**IMPORTANT**: Firebase requires proper configuration to work. Follow these steps:
+
+1. Create a Firebase project at https://console.firebase.google.com/
+2. Enable Email/Password authentication
+3. Create a Firestore database
+4. **Deploy security rules** - This is critical to avoid permission errors:
+
+   **Option A: Using Firebase CLI (Recommended)**
+   ```bash
+   npm install -g firebase-tools
+   firebase login
+   firebase init firestore
+   firebase deploy --only firestore:rules
+   ```
+
+   **Option B: Manual**
+   - Go to Firebase Console > Firestore Database > Rules
+   - Copy contents from `firestore.rules` file in this project
+   - Paste and publish in Firebase Console
+
+For detailed setup instructions, see **[FIREBASE_SETUP.md](./FIREBASE_SETUP.md)**
 
 ### 5. Run Development Servers
 
@@ -94,6 +112,38 @@ The application uses a client-server architecture:
 - **Firebase**: User authentication and data storage
 
 This architecture ensures your API keys are never exposed to the browser and solves CORS issues.
+
+## Troubleshooting
+
+### Firebase Permission Errors
+
+If you see `FirebaseError: [code=permission-denied]`:
+
+1. **Deploy Firestore security rules** (most common issue):
+   - Run `firebase deploy --only firestore:rules` OR
+   - Manually copy `firestore.rules` to Firebase Console
+
+2. **Verify you're logged in** to the app with a valid account
+
+3. **Check Firebase configuration** in your `.env` file
+
+### CORS Errors with Anthropic API
+
+If you see CORS errors about `api.anthropic.com`:
+
+1. **Ensure the backend server is running**: `npm run server:dev`
+2. **Verify `VITE_API_URL`** is set to `http://localhost:3001` in `.env`
+3. **Check backend logs** for any error messages
+
+### Backend Connection Errors
+
+If the frontend can't connect to the backend:
+
+1. **Verify both servers are running**: Backend on port 3001, frontend on port 5173
+2. **Check for port conflicts**: Make sure nothing else is using port 3001
+3. **Review browser console** for detailed error messages
+
+For detailed troubleshooting, see [FIREBASE_SETUP.md](./FIREBASE_SETUP.md)
 
 ## License
 

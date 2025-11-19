@@ -29,3 +29,8 @@ dist-ssr
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Firebase
+.firebaserc
+firebase-debug.log
+.firebase/
