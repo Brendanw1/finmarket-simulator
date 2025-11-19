@@ -13,11 +13,12 @@ An AI-powered financial markets simulator designed as a study tool for banking a
 
 ## Technology Stack
 
-- React 18 + TypeScript + Vite
-- Tailwind CSS
-- Claude API (claude-sonnet-4-5-20250929)
-- Firebase (Authentication + Firestore)
-- Recharts
+- **Frontend**: React 18 + TypeScript + Vite
+- **Backend**: Express.js (API proxy server)
+- **Styling**: Tailwind CSS
+- **AI**: Claude API (claude-sonnet-4-5-20250929)
+- **Database**: Firebase (Authentication + Firestore)
+- **Charts**: Recharts
 
 ## Setup Instructions
 
@@ -46,11 +47,21 @@ cp .env.example .env
 2. Create Firestore database
 3. Add security rules (see Firebase Console)
 
-### 5. Run Development Server
+### 5. Run Development Servers
 
+**Important**: You need to run BOTH the backend server and the frontend:
+
+**Terminal 1 - Backend Server:**
+```bash
+npm run server:dev
+```
+
+**Terminal 2 - Frontend:**
 ```bash
 npm run dev
 ```
+
+The backend server will run on `http://localhost:3001` and the frontend on `http://localhost:5173`.
 
 ## Usage
 
@@ -68,9 +79,21 @@ npm run build
 
 ## Important Notes
 
-- Claude API calls are made from the browser (use backend proxy for production)
-- Max file size: 10MB for uploads
-- Costs: ~$0.10-0.30 per scenario/feedback
+- **Backend Required**: The app now uses a secure backend server to handle Claude API calls (no more CORS issues!)
+- **API Key Security**: Your Anthropic API key is stored securely on the backend server, not exposed to the browser
+- **Max file size**: 10MB for uploads
+- **Costs**: ~$0.10-0.30 per scenario/feedback
+
+## Architecture
+
+The application uses a client-server architecture:
+
+- **Frontend** (React): User interface running in the browser
+- **Backend** (Express): Secure API proxy that communicates with Anthropic API
+- **Anthropic API**: Claude AI for generating scenarios and feedback
+- **Firebase**: User authentication and data storage
+
+This architecture ensures your API keys are never exposed to the browser and solves CORS issues.
 
 ## License
 

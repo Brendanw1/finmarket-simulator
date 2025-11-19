@@ -1,9 +1,5 @@
-import Anthropic from '@anthropic-ai/sdk';
 import { ClaudeAnalysis, Trade, Scenario } from '../types';
-
-const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
-
-let client: Anthropic | null = null;
+import { callClaudeAPI, ClaudeMessage } from './api';
 
 // Conversation history for maintaining context across the session
 interface ConversationMessage {
@@ -13,19 +9,6 @@ interface ConversationMessage {
 
 let conversationHistory: ConversationMessage[] = [];
 let courseMaterialsContext: string = '';
-
-export const getClaudeClient = (): Anthropic => {
-  if (!client && apiKey) {
-    client = new Anthropic({
-      apiKey,
-      dangerouslyAllowBrowser: true, // Note: In production, use a backend proxy
-    });
-  }
-  if (!client) {
-    throw new Error('Anthropic API key not configured. Please add VITE_ANTHROPIC_API_KEY to your .env file');
-  }
-  return client;
-};
 
 /**
  * Upload and process PDF or slides in base64 format
@@ -37,10 +20,8 @@ export const uploadCourseMaterials = async (
   mimeType: string
 ): Promise<{ success: boolean; summary: string; error?: string }> => {
   try {
-    const claude = getClaudeClient();
-
     // For PDFs, use document support in Claude API
-    const messages: ConversationMessage[] = [
+    const messages: ClaudeMessage[] = [
       {
         role: 'user',
         content: [
@@ -66,13 +47,15 @@ Store this information as you will be asked to create realistic market scenarios
       },
     ];
 
-    const response = await claude.messages.create({
+    const response = await callClaudeAPI({
       model: 'claude-sonnet-4-5-20250929',
       max_tokens: 4096,
-      messages: messages as Anthropic.MessageParam[],
+      messages,
     });
 
-    const summary = response.content[0].type === 'text' ? response.content[0].text : '';
+    const summary = response.content[0].type === 'text' && response.content[0].text
+      ? response.content[0].text
+      : '';
 
     // Store the course materials context
     courseMaterialsContext = summary;
@@ -107,8 +90,6 @@ export const generateScenario = async (
   specificConcepts?: string[]
 ): Promise<Scenario | null> => {
   try {
-    const claude = getClaudeClient();
-
     const conceptsText = specificConcepts && specificConcepts.length > 0
       ? `Focus specifically on these concepts: ${specificConcepts.join(', ')}.`
       : '';
@@ -147,7 +128,7 @@ Please provide a JSON response with the following structure:
 
 Make the scenario realistic, educational, and aligned with the concepts from the course materials. The scenario should have a clear learning objective tied to specific topics from the uploaded materials.`;
 
-    const messages: ConversationMessage[] = [
+    const messages: ClaudeMessage[] = [
       ...conversationHistory,
       {
         role: 'user',
@@ -155,13 +136,15 @@ Make the scenario realistic, educational, and aligned with the concepts from the
       },
     ];
 
-    const response = await claude.messages.create({
+    const response = await callClaudeAPI({
       model: 'claude-sonnet-4-5-20250929',
       max_tokens: 4096,
-      messages: messages as Anthropic.MessageParam[],
+      messages,
     });
 
-    const responseText = response.content[0].type === 'text' ? response.content[0].text : '';
+    const responseText = response.content[0].type === 'text' && response.content[0].text
+      ? response.content[0].text
+      : '';
 
     // Update conversation history
     conversationHistory = [
@@ -231,8 +214,6 @@ export const evaluateTradingDecisions = async (
   suggestions: string[];
 }> => {
   try {
-    const claude = getClaudeClient();
-
     const returnPercent = ((finalValue - initialValue) / initialValue) * 100;
 
     const tradesDescription = trades.map(t =>
@@ -267,7 +248,7 @@ Please provide a JSON response with the following structure:
 
 Make your feedback educational and reference specific theories, models, or frameworks from the uploaded course materials. Explain what they did well and what they could improve.`;
 
-    const messages: ConversationMessage[] = [
+    const messages: ClaudeMessage[] = [
       ...conversationHistory,
       {
         role: 'user',
@@ -275,13 +256,15 @@ Make your feedback educational and reference specific theories, models, or frame
       },
     ];
 
-    const response = await claude.messages.create({
+    const response = await callClaudeAPI({
       model: 'claude-sonnet-4-5-20250929',
       max_tokens: 4096,
-      messages: messages as Anthropic.MessageParam[],
+      messages,
     });
 
-    const responseText = response.content[0].type === 'text' ? response.content[0].text : '';
+    const responseText = response.content[0].type === 'text' && response.content[0].text
+      ? response.content[0].text
+      : '';
 
     // Update conversation history
     conversationHistory = [
@@ -328,8 +311,6 @@ export const explainMarketOutcome = async (
   affectedAssets: string[]
 ): Promise<string> => {
   try {
-    const claude = getClaudeClient();
-
     const prompt = `Based on the course materials, explain the following market event and its impact using appropriate financial terminology and concepts:
 
 Event: ${event}
@@ -338,7 +319,7 @@ Affected Assets: ${affectedAssets.join(', ')}
 
 Provide a brief educational explanation (2-3 paragraphs) that references relevant theories or frameworks from the course materials. This should help a student understand the "why" behind market movements.`;
 
-    const messages: ConversationMessage[] = [
+    const messages: ClaudeMessage[] = [
       ...conversationHistory,
       {
         role: 'user',
@@ -346,13 +327,15 @@ Provide a brief educational explanation (2-3 paragraphs) that references relevan
       },
     ];
 
-    const response = await claude.messages.create({
+    const response = await callClaudeAPI({
       model: 'claude-sonnet-4-5-20250929',
       max_tokens: 1024,
-      messages: messages as Anthropic.MessageParam[],
+      messages,
     });
 
-    const explanation = response.content[0].type === 'text' ? response.content[0].text : '';
+    const explanation = response.content[0].type === 'text' && response.content[0].text
+      ? response.content[0].text
+      : '';
 
     // Update conversation history
     conversationHistory = [
@@ -386,13 +369,11 @@ export const getSuggestedTopics = async (): Promise<string[]> => {
   }
 
   try {
-    const claude = getClaudeClient();
-
     const prompt = `Based on the course materials you analyzed earlier, provide a list of 8-10 specific topics that would make good market simulation scenarios. Format your response as a JSON array of strings.
 
 Example: ["Interest Rate Risk", "Options Pricing", "Portfolio Theory", ...]`;
 
-    const messages: ConversationMessage[] = [
+    const messages: ClaudeMessage[] = [
       ...conversationHistory,
       {
         role: 'user',
@@ -400,13 +381,15 @@ Example: ["Interest Rate Risk", "Options Pricing", "Portfolio Theory", ...]`;
       },
     ];
 
-    const response = await claude.messages.create({
+    const response = await callClaudeAPI({
       model: 'claude-sonnet-4-5-20250929',
       max_tokens: 1024,
-      messages: messages as Anthropic.MessageParam[],
+      messages,
     });
 
-    const responseText = response.content[0].type === 'text' ? response.content[0].text : '';
+    const responseText = response.content[0].type === 'text' && response.content[0].text
+      ? response.content[0].text
+      : '';
 
     // Parse the JSON array
     const jsonMatch = responseText.match(/\[[\s\S]*\]/);
@@ -438,9 +421,7 @@ export const hasCourseMaterials = (): boolean => {
 
 // Legacy functions for backwards compatibility
 export const analyzeDocument = async (content: string): Promise<ClaudeAnalysis> => {
-  const claude = getClaudeClient();
-
-  const message = await claude.messages.create({
+  const message = await callClaudeAPI({
     model: 'claude-sonnet-4-5-20250929',
     max_tokens: 1024,
     messages: [
@@ -451,7 +432,9 @@ export const analyzeDocument = async (content: string): Promise<ClaudeAnalysis> 
     ],
   });
 
-  const text = message.content[0].type === 'text' ? message.content[0].text : '';
+  const text = message.content[0].type === 'text' && message.content[0].text
+    ? message.content[0].text
+    : '';
 
   return {
     summary: text,
@@ -468,9 +451,7 @@ export const getMarketAdvice = async (
   portfolioData: string,
   marketConditions: string
 ): Promise<string> => {
-  const claude = getClaudeClient();
-
-  const message = await claude.messages.create({
+  const message = await callClaudeAPI({
     model: 'claude-sonnet-4-5-20250929',
     max_tokens: 1024,
     messages: [
@@ -481,5 +462,7 @@ export const getMarketAdvice = async (
     ],
   });
 
-  return message.content[0].type === 'text' ? message.content[0].text : '';
+  return message.content[0].type === 'text' && message.content[0].text
+    ? message.content[0].text
+    : '';
 };
